@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #333;
+            background-color: #fff;
+            transition: background-color 0.3s ease;
+        }
+        h1 {
+            position: absolute;
+            top: 20px;
+            color: #333;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Snake Game</h1>
+<canvas id="gameCanvas" width="400" height="400"></canvas>
+<button id="startButton">Start Game</button>
+<button id="restartButton" style="display:none;">Restart Game</button>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const box = 20; // Size of each box in the grid
+    let snake;
+    let direction;
+    let food;
+    let score;
+    let bgColor;
+    let game;
+    let speed = 200; // Initial speed (slower)
+    let gameRunning = false; // Game state
+
+    // Function to create food at a random position
+    function createFood() {
+        return {
+            x: Math.floor(Math.random() * 20) * box,
+            y: Math.floor(Math.random() * 20) * box
+        };
+    }
+
+    // Draw everything on the canvas
+    function draw() {
+        ctx.fillStyle = bgColor; // Set background color
+        ctx.fillRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+
+        // Draw the food with a glowing effect
+        ctx.fillStyle = 'red';
+        ctx.shadowColor = 'rgba(255, 0, 0, 0.8)'; // Red glow
+        ctx.shadowBlur = 20; // Glow size
+        ctx.fillRect(food.x, food.y, box, box);
+        ctx.shadowBlur = 0; // Reset shadow
+
+        // Draw the snake with glowing effect
+        for (let i = 0; i < snake.length; i++) {
+            ctx.fillStyle = (i === 0) ? 'green' : 'lightgreen'; // Head is green, body is light green
+            ctx.shadowColor = (i === 0) ? 'rgba(0, 255, 0, 0.8)' : 'rgba(144, 238, 144, 0.8)'; // Green glow for head
+            ctx.shadowBlur = 15; // Glow size
+            ctx.fillRect(snake[i].x, snake[i].y, box, box);
+            ctx.strokeStyle = 'darkgreen'; // Border color
+            ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+        }
+        ctx.shadowBlur = 0; // Reset shadow
+
+        // Draw the snake's face on the head
+        drawFace(snake[0]);
+
+        // Old head position
+        let snakeX = snake[0].x;
+        let snakeY = snake[0].y;
+
+        // Move the snake in the current direction
+        if (direction === 'LEFT') snakeX -= box;
+        if (direction === 'UP') snakeY -= box;
+        if (direction === 'RIGHT') snakeX += box;
+        if (direction === 'DOWN') snakeY += box;
+
+        // Check if the snake eats the food
+        if (snakeX === food.x && snakeY === food.y) {
+            score++;
+            food = createFood(); // New food position
+            bgColor = 'lightyellow'; // Change background color briefly
+            setTimeout(() => {
+                bgColor = '#fff'; // Reset background color
+            }, 100); // Reset after 100ms
+
+            // Increase speed
+            speed = Math.max(50, speed - 2); // Increase speed (decrease interval)
+            clearInterval(game);
+            game = setInterval(draw, speed); // Reset interval with new speed
+        } else {
+            // Remove the tail
+            snake.pop();
+        }
+
+        // Add new head
+        const newHead = { x: snakeX, y: snakeY };
+
+        // Check for collisions with walls or self
+        if (snakeX < 0 || snakeY < 0 || snakeX >= canvas.width || snakeY >= canvas.height || collision(newHead, snake)) {
+            clearInterval(game);
+            alert('Game Over! Your score: ' + score);
+            document.getElementById('restartButton').style.display = 'block'; // Show restart button
+            return;
+        }
+
+        snake.unshift(newHead); // Add new head to the snake
+    }
+
+    // Function to check collision with self
+    function collision(head, array) {
+        for (let i = 0; i < array.length; i++) {
+            if (head.x === array[i].x && head.y === array[i].y) {
+                return true; // Collision detected
+            }
+        }
+        return false; // No collision
+    }
+
+    // Function to draw the snake's face
+    function drawFace(head) {
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(head.x + box / 2, head.y + box / 2, box / 4, 0, Math.PI * 2, false); // Face
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(head.x + box / 3, head.y + box / 3, box / 8, 0, Math.PI * 2, false); // Left eye
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(head.x + (box * 2) / 3, head.y + box / 3, box / 8, 0, Math.PI * 2, false); // Right eye
+        ctx.fill();
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(head.x + box / 3, head.y + box / 3, box / 16, 0, Math.PI * 2, false); // Left pupil
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(head.x + (box * 2) / 3, head.y + box / 3, box / 16, 0, Math.PI * 2, false); // Right pupil
+        ctx.fill();
+    }
+
+    // Function to start the game
+    function startGame() {
+        snake = [{ x: 9 * box, y: 9 * box }]; // Initial snake position
+        direction = 'RIGHT'; // Initial direction
+        food = createFood(); // Create food
+        score = 0; // Reset score
+        bgColor = '#fff'; // Reset background color
+        speed = 200; // Reset speed
+        gameRunning = true; // Set game state to running
+        document.getElementById('restartButton').style.display = 'none'; // Hide restart button
+        game = setInterval(draw, speed); // Start the game loop
+    }
+
+    // Function to restart the game
+    function restartGame() {
+        clearInterval(game); // Clear the interval
+        startGame(); // Start a new game
+    }
+
+    // Event listeners for buttons
+    document.getElementById('startButton').addEventListener('click', startGame);
+    document.getElementById('restartButton').addEventListener('click', restartGame);
+
+    // Control the snake with arrow keys
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+        if (event.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+        if (event.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+        if (event.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+    });
+</script>
+
+</body>
+</html>
